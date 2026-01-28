@@ -15,8 +15,8 @@ const auth = betterAuth({
   },
   plugins: [
     jwt({
-      issuer: "http://localhost:3000",
-      audience:"http://localhost:3000",
+      issuer: process.env.JWT_ISSUER,    // Stamped on the token
+      audience: process.env.JWT_AUDIENCE, // Stamped on the token
       jwt: { expirationTime: "1h" },
     }),
     bearer(),

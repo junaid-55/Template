@@ -20,10 +20,13 @@ const authenticate = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
 
     try {
-        const { payload } = await jwtVerify(token, JWKS, {
-            issuer: "http://localhost:8081",
-        });
+        console.log("Expected Iss:", process.env.JWT_ISSUER);
         
+        const { payload } = await jwtVerify(token, JWKS, {
+            issuer: process.env.JWT_ISSUER,
+            audience: process.env.JWT_AUDIENCE,
+        });
+        console.log("Token Iss:", payload.iss);
         req.user = payload; // Attach user claims (id, email, etc.) to the request
         next();
     } catch (e) {
@@ -45,4 +48,4 @@ app.get('/api/service-a/preferences', authenticate, async (req, res) => {
 });
 
 const PORT = 3001;
-app.listen(PORT, () => console.log(`🚀 Service-A running on internal port ${PORT}`));
+app.listen(PORT, () => console.log(`Service-A running on internal port ${PORT}`));
