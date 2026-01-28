@@ -1,24 +1,44 @@
-version: "3.9"
+version: '3.8'
 
 services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./infra/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
   auth-service:
     build: ./services/auth-service
-    container_name: auth-service
-    expose:
-      - "3000"
-
-  api-gateway:
-    build: ./api-gateway
-    container_name: api-gateway
-    ports:
-      - "8080:80"
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}"
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
     depends_on:
+      - db
+
+  service-a:
+    build: ./services/service-a
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?search_path=service_a"
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      AUTH_JWKS_URL: "${AUTH_SERVICE_INTERNAL_URL}/api/auth/jwks"
+      JWT_ISSUER: ${BETTER_AUTH_URL}
+    depends_on:
+      - db
       - auth-service
 
-  pg:
-    image: postgres:15-alpine
-    container_name: shared-pg-db
-    environment:
-      POSTGRES_PASSWORD: postgres
+  nginx:
+    image: nginx:alpine
     ports:
-      - "5433:5432"
+      - "8081:80"
+    volumes:
+      - ./api-gateway/.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - auth-service
+      - service-a

@@ -1,32 +1,49 @@
 import express from 'express';
-import { betterAuth } from 'better-auth';
+import { betterAuth } from "better-auth";
+import { jwt, bearer } from "better-auth/plugins"; // Import plugins
+import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
+import pg from 'pg';
 
 const app = express();
-const PORT = 3000;
 
-// 1. Initialize better-auth
 const auth = betterAuth({
-    // Your configuration goes here (database, providers, etc.)
-    // Example:
-    /* database: new Kysely({ ... }),
-    socialProviders: { ... } 
-    */
+  database: new pg.Pool({ 
+        connectionString: process.env.DATABASE_URL 
+    }),
+  session: {
+    strategy: "jwt",
+  },
+  plugins: [
+    jwt({
+      issuer: "http://localhost:3000",
+      audience:"http://localhost:3000",
+      jwt: { expirationTime: "1h" },
+    }),
+    bearer(),
+  ],
+  emailAndPassword: { enabled: true },
 });
+
+
+// IMPORTANT: Auth handler must come before express.json()
+app.all("/api/auth/*", toNodeHandler(auth));
 
 app.use(express.json());
 
-// 2. The "Handshake" - Mount the auth handler
-// This single route handles /api/auth/login, /api/auth/signup, etc.
-app.all("/api/auth/*", (req) => {
-    return auth.handler(req);
+app.get("/api/me", async (req, res) => {
+    const session = await auth.api.getSession({
+        headers: fromNodeHeaders(req.headers)
+    });
+    res.json(session || { user: null });
 });
 
-// Health check
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({ service: 'auth', status: 'ok' });
 });
 
-// Start server
+// FIX: Added 'const' keyword
+const PORT = 3000; 
+
 app.listen(PORT, () => {
   console.log(`✅ Auth service running on port ${PORT}`);
 });
