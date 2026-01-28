@@ -42,11 +42,14 @@ services:
       - auth-service
 
   nginx:
-    image: nginx:alpine
-    ports:
-      - "8081:80"
-    volumes:
-      - ./api-gateway/.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - auth-service
-      - service-a
+      image: nginx:alpine
+      ports:
+        - "8081:80"
+      volumes:
+        - ./api-gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      environment:
+        - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
+        - SERVICE_A_INTERNAL_URL=${SERVICE_A_INTERNAL_URL}
+      depends_on:
+        - auth-service
+        - service-a

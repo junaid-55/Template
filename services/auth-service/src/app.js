@@ -41,7 +41,6 @@ app.get('/api/health', (req, res) => {
   res.json({ service: 'auth', status: 'ok' });
 });
 
-// FIX: Added 'const' keyword
 const PORT = 3000; 
 
 app.listen(PORT, () => {
